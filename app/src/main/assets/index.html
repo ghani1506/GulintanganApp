@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gulintangan Player</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: warm and ceremonial, like a stage at a majlis
+   IDEA: the gulintangan rack itself: a carved wooden frame with brass gongs resting on cords
+   PICTURE: the full instrument, with drawn brass gongs and raised bosses, filling the first screen
+   COLOUR and TYPE: deep lacquer maroon, brass gold, cream text; Marcellus titles, Nunito Sans body
+   LAYOUT: modest title, then the rack, then the control strip, then short tips */
+:root{color-scheme:dark;--bg:#1e0b07;--ink:#f6e7cf;--mute:#cfb594;--gold:#e9b949;--line:rgba(233,185,73,.3)}
+*{box-sizing:border-box;min-width:0}
+html,body{-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;background:radial-gradient(130% 70% at 50% 0%,#4f1c10 0,#2a0f08 45%,#1a0905 100%);color:var(--ink);font:16px/1.55 'Nunito Sans',system-ui,sans-serif;overflow-x:clip;touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+header{max-width:1240px;margin:0 auto;padding:18px max(4vw,16px) 8px;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 18px}
+h1{margin:0;font:400 clamp(28px,4.2vw,44px)/1.05 Marcellus,Georgia,serif;color:var(--gold);text-wrap:balance}
+header p{margin:0;color:var(--mute);font-size:15px}
+.stage{max-width:1240px;margin:0 auto;padding:8px max(3vw,10px)}
+#rack{touch-action:none;display:grid;gap:0;padding:var(--mp);border-radius:12px;
+ background:repeating-linear-gradient(0deg,rgba(0,0,0,.06) 0 2px,transparent 2px 9px),repeating-linear-gradient(90deg,#d3bd8f 0 3px,#bda270 3px 5px,#c9b07f 5px 8px);
+ box-shadow:inset 0 0 40px rgba(60,30,10,.35),0 14px 30px rgba(0,0,0,.45)}
+.rail{position:relative;display:grid;grid-template-columns:repeat(16,minmax(0,1fr))}
+.rail.sh{padding:0 var(--fr)}
+.rail.nat{border:var(--fr) solid #3a1c0e;border-radius:4px;
+ border-color:#4a2614 #2e1509 #241006 #3a1c0e;
+ box-shadow:0 8px 14px rgba(0,0,0,.45),inset 0 0 0 1px rgba(255,200,150,.12)}
+.cell{position:relative;display:flex;flex-direction:column;align-items:center;padding:2px 0;
+ background:linear-gradient(transparent calc(var(--cw)*.32 - 1px),rgba(235,222,196,.9) 0 calc(var(--cw)*.32 + 1px),transparent 0 calc(var(--cw)*.7 - 1px),rgba(235,222,196,.9) 0 calc(var(--cw)*.7 + 1px),transparent 0)}
+.nat .cell+.cell{border-left:max(4px,calc(var(--fr)*.7)) solid #331809}
+.sh .cell{border:max(5px,calc(var(--fr)*.8)) solid #7a4a24;border-color:#9a6534 #6a3d1c #5a3216 #84522a;border-bottom:0;
+ box-shadow:0 -4px 10px rgba(0,0,0,.3),inset 0 0 0 1px rgba(0,0,0,.25)}
+.seat{width:100%;height:var(--cw);display:grid;place-items:center}
+#rot{display:none;margin:10px 0 0;text-align:center;color:var(--mute);font-size:14px}
+#rack.tiny+#rot{display:block}
+.gong{position:relative;z-index:1;width:min(var(--s),calc(100% - 2px));aspect-ratio:1;border-radius:50%;cursor:pointer;outline:none;
+ background:radial-gradient(circle at 34% 28%,#fbf6e4 0,#e3d5ab 14%,#bba979 40%,#887449 68%,#54452a 92%,#30281a 100%);
+ box-shadow:0 8px 12px rgba(0,0,0,.55),inset 0 -6px 10px rgba(0,0,0,.4),inset 0 3px 4px rgba(255,250,225,.6)}
+.gong::before{content:'';position:absolute;inset:15%;border-radius:50%;
+ background:radial-gradient(circle at 62% 72%,rgba(0,0,0,.3),transparent 60%),radial-gradient(circle at 36% 30%,#f2e8c6 0,#c4b283 42%,#80703f 84%);
+ box-shadow:inset 0 2px 4px rgba(0,0,0,.5),0 1px 0 rgba(255,250,225,.5)}
+.boss{position:absolute;inset:34%;border-radius:50%;
+ background:radial-gradient(circle at 36% 30%,#fffdf2 0,#ece0b6 16%,#b8a370 48%,#7c6a3e 84%,#4e4224 100%);
+ box-shadow:0 5px 7px rgba(0,0,0,.6),inset 0 -3px 5px rgba(0,0,0,.35)}
+.ripple{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(255,222,140,.9);opacity:0;pointer-events:none}
+.gong:focus-visible{box-shadow:0 0 0 3px #fff,0 10px 14px rgba(0,0,0,.6)}
+.gong.hit{animation:wob .45s ease-out}
+.gong.hit .ripple{animation:rip .75s ease-out}
+.gong.hit .boss{filter:brightness(1.25)}
+@keyframes wob{0%{transform:scale(.94) translateY(2px)}35%{transform:scale(1.025) rotate(.6deg)}65%{transform:scale(.995) rotate(-.4deg)}100%{transform:none}}
+@keyframes rip{0%{opacity:.9;transform:scale(.4)}100%{opacity:0;transform:scale(1.4)}}
+@media(prefers-reduced-motion:reduce){.gong.hit,.gong.hit .ripple{animation:none}}
+.lbl{padding:2px 8px;border-radius:7px;background:rgba(36,16,7,.82);text-align:center;line-height:1.15;white-space:nowrap}
+.lbl b{display:block;font-weight:700;font-size:clamp(13px,1.5vw,16px)}
+.lbl span{font-size:13px;color:var(--mute)}
+#rack.tight .lbl span{display:none}
+.rec{max-width:1240px;margin:26px auto 0;padding:0 max(3vw,12px)}
+.rec h2{margin:0 0 4px;font:400 clamp(24px,3vw,30px)/1.1 Marcellus,Georgia,serif;color:var(--gold)}
+.rec>p{margin:0 0 12px;color:var(--mute);font-size:15px;max-width:70ch}
+.rec ol{margin:0 0 14px;padding-left:22px;color:var(--mute);font-size:15px;max-width:70ch}
+.rec ol li{margin:3px 0}.rec ol b{color:var(--ink)}
+.quick{padding:14px 16px;margin:0 0 16px;border:1px solid var(--gold);border-radius:14px;background:rgba(233,185,73,.08);max-width:760px}
+.quick p{margin:0 0 10px}
+.app-only{display:none!important}body.inapp .app-only{display:inline-flex!important}body.inapp p.app-only{display:block!important}
+#det{color:var(--ink);font-size:15px}
+#det select{min-height:40px;margin-left:6px;padding:0 10px;border-radius:10px;border:1px solid var(--line);background:#2a120a;color:var(--ink);font:600 16px 'Nunito Sans',sans-serif}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:8px}
+#msg{color:var(--gold);font-size:14px;min-height:1.4em;margin:4px 0 6px}
+.rrow{display:grid;grid-template-columns:4.2em minmax(0,1fr) auto;gap:6px 12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.rrow b{font-size:17px}
+.stt{color:var(--mute);font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stt.ok{color:var(--ink)}.stt.ok::before{content:'✓ ';color:var(--gold);font-weight:700}
+.acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.sm{position:relative;min-height:40px;padding:0 14px;border-radius:20px;border:1px solid var(--line);background:rgba(0,0,0,.25);color:var(--ink);font:600 14px 'Nunito Sans',sans-serif;cursor:pointer;display:inline-flex;align-items:center;overflow:hidden}
+.sm.gold{border-color:var(--gold);color:var(--gold)}
+.sm input{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:16px}
+.sm:focus-within{outline:2px solid #fff;outline-offset:2px}
+@media(max-width:520px){.rrow{grid-template-columns:3.4em minmax(0,1fr)}.acts{grid-column:1/-1;justify-content:flex-start}}
+.gong.has::after{content:'';position:absolute;z-index:2;left:50%;bottom:6%;width:8px;height:8px;margin-left:-4px;border-radius:50%;background:#e9b949;box-shadow:0 0 0 2px rgba(36,16,7,.7)}
+.x{content:'';display:inline-block;width:7px;height:7px;margin-left:5px;border-radius:50%;background:var(--gold);vertical-align:middle}
+.controls{max-width:1240px;margin:16px auto 0;padding:0 max(3vw,12px);display:flex;flex-wrap:wrap;gap:14px 22px;align-items:flex-end}
+.grp{display:flex;flex-direction:column;gap:6px}
+.cap{font-size:13px;font-weight:700;color:var(--mute)}
+.seg{display:flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:22px;padding:3px;background:rgba(0,0,0,.28)}
+.seg button{min-height:40px;padding:0 14px;border:0;border-radius:20px;background:none;color:var(--ink);font:600 15px 'Nunito Sans',sans-serif;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--gold);color:#2a1206}
+.btn{min-height:44px;padding:0 20px;border-radius:22px;border:1px solid var(--gold);background:rgba(233,185,73,.12);color:var(--gold);font:700 15px 'Nunito Sans',sans-serif;cursor:pointer}
+.btn:disabled{opacity:.5}
+button:focus-visible,input:focus-visible{outline:2px solid #fff;outline-offset:2px}
+input[type=range]{width:170px;height:44px;accent-color:var(--gold)}
+.tips{max-width:1240px;margin:18px auto 40px;padding:0 max(3vw,12px);color:var(--mute);font-size:15px}
+.tips ul{margin:0;padding-left:20px;max-width:70ch}
+.tips li{margin:4px 0}
+.tips strong{color:var(--ink)}
+.note{margin-top:10px;font-size:13px}
+</style></head><body>
+<header>
+ <h1>Gulintangan</h1>
+ <p>Tap the gongs to play. Slide your finger across them for a run.</p>
+</header>
+<main class="stage"><div id="rack" aria-label="Gulintangan gongs"></div><p id="rot">Turn your phone sideways for bigger gongs.</p></main>
+<section class="controls" aria-label="Settings">
+ <div class="grp"><span class="cap">Sound</span><div class="seg" data-k="src">
+  <button data-v="syn">Synth</button><button data-v="rec">My recordings</button></div></div>
+ <div class="grp"><span class="cap">Range</span><div class="seg" data-k="oct">
+  <button data-v="0">C4–C5</button><button data-v="1">C5–C6</button><button data-v="2">C6–C7</button></div></div>
+ <div class="grp"><span class="cap">Gongs</span><div class="seg" data-k="mode">
+  <button data-v="d">Natural · 8</button><button data-v="c">Chromatic · 13</button></div></div>
+ <div class="grp"><span class="cap">Ring</span><div class="seg" data-k="ring">
+  <button data-v="long">Long</button><button data-v="short">Damped</button></div></div>
+ <div class="grp"><label class="cap" for="vol">Volume</label><input id="vol" type="range" min="0" max="1" step="0.01"></div>
+ <div class="grp"><button class="btn" id="scale">Play scale</button></div>
+</section>
+<section class="rec" id="recs" aria-label="My recordings">
+ <h2>Use your own instrument</h2>
+ <p>Load a recording of each gong and the app plays your real instrument. A note with no recording borrows the nearest one you loaded and shifts its pitch.</p>
+ <div class="quick">
+  <p><b>Fastest way:</b> record just one gong. The app finds which note it is and builds every other note from it automatically.</p>
+  <p class="app-only">Tap <b>Record one note</b>, then strike a gong within 3 seconds.</p>
+  <div class="bar"><button class="sm gold app-only" id="recone">Record one note</button><label class="sm gold">Load one recording<input type="file" id="one" accept="audio/*,video/*"></label><span id="det"></span></div>
+ </div>
+ <p>For the most realistic sound, record every gong:</p>
+ <ol>
+  <li><b>Record</b> each gong struck once, about 2 seconds, in a quiet room with the phone about 30 cm away. Voice Memos or any recorder app works.</li>
+  <li><b>Name the files</b> by note, such as C5, C#5 (or Cs5), D5, Eb5. Then load them all at once and each goes to the right gong. Otherwise use Load on each row.</li>
+  <li><b>Play</b> with Sound set to My recordings. Recordings stay saved in this browser on this device.</li>
+ </ol>
+ <div class="bar"><label class="sm gold">Load several files<input type="file" id="multi" accept="audio/*,video/*" multiple></label><button class="sm" id="clrall">Clear all</button></div>
+ <div id="msg" role="status"></div>
+ <div id="rows"></div>
+</section>
+<section class="tips">
+ <ul>
+  <li><strong>Centre knob (pencu):</strong> tap it for the full, deep tone. Strike the shoulder for a brighter, shorter ring.</li>
+  <li><strong>Several fingers</strong> work at the same time, so you can play the melody and the drone together.</li>
+  <li><strong>Sound:</strong> modelled on caklempong brass kettle gongs, with a bright, clear and fairly short ring. Choose <em>Damped</em> for a crisp, stopped note.</li>
+  <li><strong>No sound on iPhone?</strong> Turn the volume up and switch off Silent mode.</li>
+  <li><strong>Computer keys:</strong> A S D F G H J K (natural), or A W S E D F T G Y H U J K (chromatic).</li>
+ </ul>
+ <p class="note">The Synth sound is generated in your browser to imitate caklempong gongs. Switch Sound to My recordings to hear your own instrument.</p>
+</section>
+<script>
+{
+const NAMES=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
+const DIAT=[0,2,4,5,7,9,11,12],CHROM=[0,1,2,3,4,5,6,7,8,9,10,11,12];
+const KEYS={c:'awsedftgyhujk',d:'asdfghjk'};
+const P=[{r:1,a:1,d:1},{r:1,a:.38,d:.85,beat:2.6},{r:2.0,a:.4,d:.5},{r:2.99,a:.22,d:.33},{r:4.07,a:.13,d:.22},{r:5.42,a:.08,d:.14},{r:6.93,a:.045,d:.09}];
+const st={src:'syn',oct:1,mode:'c',ring:'long',vol:.85};
+try{Object.assign(st,JSON.parse(localStorage.getItem('gulintangan2')||'{}'))}catch(e){}
+const save=()=>{try{localStorage.setItem('gulintangan2',JSON.stringify(st))}catch(e){}};
+const rack=document.getElementById('rack');
+let ctx=null,bus,master,noiseBuf,cur=[];
+const voices=[];
+
+function impulse(sec){
+ const r=ctx.sampleRate,len=r*sec|0,b=ctx.createBuffer(2,len,r);
+ for(let c=0;c<2;c++){const d=b.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,3.2)}
+ return b;
+}
+function initAudio(){
+ if(ctx){if(ctx.state!=='running')ctx.resume();return}
+ try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch(e){}
+ const AC=window.AudioContext||window.webkitAudioContext;
+ ctx=new AC();
+ const comp=ctx.createDynamicsCompressor();
+ comp.threshold.value=-14;comp.knee.value=10;comp.ratio.value=4;comp.attack.value=.003;comp.release.value=.25;
+ master=ctx.createGain();master.gain.value=st.vol;
+ bus=ctx.createGain();
+ const rev=ctx.createConvolver();rev.buffer=impulse(1.8);
+ const wet=ctx.createGain();wet.gain.value=.2;
+ bus.connect(master);bus.connect(wet);wet.connect(rev);rev.connect(master);
+ master.connect(comp);comp.connect(ctx.destination);
+ const len=ctx.sampleRate*.08|0;noiseBuf=ctx.createBuffer(1,len,ctx.sampleRate);
+ const d=noiseBuf.getChannelData(0);for(let i=0;i<len;i++)d[i]=Math.random()*2-1;
+}
+['touchend','click','keydown'].forEach(t=>document.addEventListener(t,()=>{if(ctx&&ctx.state!=='running')ctx.resume()},{passive:true}));
+
+function strike(f,vel,c,m){
+ initAudio();
+ if(st.src==='rec'&&playSample(m,vel))return;
+ const t=ctx.currentTime+.005;
+ const base=st.ring==='long'?1.5*Math.pow(523.3/f,.35):.22;
+ const out=ctx.createGain();out.gain.value=.3*vel;out.connect(bus);
+ let end=t;
+ P.forEach((p,i)=>{
+  const fr=f*p.r+(p.beat||0);
+  if(fr>ctx.sampleRate/2.2)return;
+  const o=ctx.createOscillator(),g=ctx.createGain();
+  o.frequency.setValueAtTime(fr*1.005,t);o.frequency.exponentialRampToValueAtTime(fr,t+.05);
+  const a=p.a*(i<2?.6+.4*c:1+.8*(1-c))*(.75+.25*vel);
+  const tau=base*p.d*(i<2?1:.7+.3*c);
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(a,t+.004);g.gain.setTargetAtTime(0,t+.006,tau/2.5);
+  o.connect(g);g.connect(out);o.start(t);o.stop(t+tau*3+.2);end=Math.max(end,t+tau*3);
+ });
+ const n=ctx.createBufferSource(),bp=ctx.createBiquadFilter(),ng=ctx.createGain();
+ n.buffer=noiseBuf;bp.type='bandpass';bp.frequency.value=Math.min(9000,f*6+1500*(1-c));bp.Q.value=1.4;
+ ng.gain.setValueAtTime(.4*vel,t);ng.gain.exponentialRampToValueAtTime(.001,t+.025);
+ n.connect(bp);bp.connect(ng);ng.connect(out);n.start(t);n.stop(t+.08);
+ voices.push(out);
+ if(voices.length>28){const v=voices.shift();v.gain.setTargetAtTime(0,ctx.currentTime,.04)}
+}
+
+function notes(){
+ const set=st.mode==='c'?CHROM:DIAT;
+ return set.map(s=>{const m=60+12*st.oct+s;return{s,m,f:440*Math.pow(2,(m-69)/12),name:NAMES[m%12]+(Math.floor(m/12)-1)}});
+}
+const NAT={0:0,2:1,4:2,5:3,7:4,9:5,11:6,12:7};
+function build(){
+ const ns=notes(),W=rack.clientWidth||innerWidth;
+ const mp=W<560?6:14,fr=W<560?6:11,cw=Math.min(150,Math.floor((W-mp*2-fr*2)/8));
+ rack.style.setProperty('--cw',cw+'px');rack.style.setProperty('--mp',mp+'px');rack.style.setProperty('--fr',fr+'px');
+ rack.classList.toggle('tight',cw<70);rack.classList.toggle('tiny',cw<52);
+ const cell=(n,i,col)=>{const sc=1-.1*i/(ns.length-1);
+  return `<div class="cell" style="grid-column:${col}/span 2"><div class="seat"><div class="gong${samples.has(n.m)?' has':''}" data-i="${i}" style="--s:${(cw*.97*sc).toFixed(1)}px" role="button" tabindex="0" aria-label="Gong ${n.name}"><div class="boss"></div><div class="ripple"></div></div></div></div>`};
+ let top='',bot='';
+ ns.forEach((n,i)=>{if(n.s in NAT)bot+=cell(n,i,2*NAT[n.s]+1);else top+=cell(n,i,2*NAT[n.s-1]+2)});
+ rack.innerHTML=(st.mode==='c'?`<div class="rail sh">${top}</div>`:'')+`<div class="rail nat">${bot}</div>`;cur=ns;renderRows();
+}
+function hitEl(g,e,mul=1){
+ if(!g)return;
+ let c=1;
+ if(e&&e.clientX!=null){
+  const r=g.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2);
+  c=Math.min(1,Math.max(0,1-Math.hypot(dx,dy)/(r.width/2))*1.6);
+ }
+ const vel=e&&e.pointerType==='pen'&&e.pressure?.5+.5*e.pressure:1;
+ const nt=cur[+g.dataset.i];strike(nt.f,vel*mul,c,nt.m);
+ g.classList.remove('hit');void g.offsetWidth;g.classList.add('hit');
+}
+
+const active=new Map();
+rack.addEventListener('pointerdown',e=>{
+ const g=e.target.closest('.gong');if(!g)return;
+ e.preventDefault();hitEl(g,e);active.set(e.pointerId,g);
+});
+rack.addEventListener('pointermove',e=>{
+ if(!active.has(e.pointerId))return;
+ const el=document.elementFromPoint(e.clientX,e.clientY),g=el&&el.closest('.gong');
+ if(g&&g!==active.get(e.pointerId)){hitEl(g,e,.75);active.set(e.pointerId,g)}
+});
+['pointerup','pointercancel','pointerleave'].forEach(t=>rack.addEventListener(t,e=>active.delete(e.pointerId)));
+rack.addEventListener('contextmenu',e=>e.preventDefault());
+
+document.addEventListener('keydown',e=>{
+ if(e.repeat||e.metaKey||e.ctrlKey)return;
+ if((e.key==='Enter'||e.key===' ')&&e.target.classList&&e.target.classList.contains('gong')){e.preventDefault();hitEl(e.target);return}
+ const i=KEYS[st.mode].indexOf(e.key.toLowerCase());
+ if(i>=0&&e.target.tagName!=='INPUT')hitEl(rack.querySelector(`.gong[data-i="${i}"]`));
+});
+
+function sync(){
+ document.querySelectorAll('.seg').forEach(s=>s.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(st[s.dataset.k])===b.dataset.v)));
+}
+document.querySelectorAll('.seg').forEach(s=>s.addEventListener('click',e=>{
+ const b=e.target.closest('button');if(!b)return;
+ const k=s.dataset.k;st[k]=k==='oct'?+b.dataset.v:b.dataset.v;
+ save();sync();if(k!=='ring'&&k!=='src')build();
+}));
+const vol=document.getElementById('vol');vol.value=st.vol;
+vol.addEventListener('input',()=>{st.vol=+vol.value;save();if(master)master.gain.setTargetAtTime(st.vol,ctx.currentTime,.02)});
+
+const sb=document.getElementById('scale');
+sb.addEventListener('click',()=>{
+ initAudio();sb.disabled=true;
+ const n=cur.length,seq=[...Array(n).keys(),...Array.from({length:n-1},(_,i)=>n-2-i)];
+ seq.forEach((i,k)=>setTimeout(()=>{hitEl(rack.querySelector(`.gong[data-i="${i}"]`));if(k===seq.length-1)sb.disabled=false},k*260));
+});
+
+let lastW=0;
+const ro=new ResizeObserver(()=>{const w=rack.clientWidth;if(Math.abs(w-lastW)>8){lastW=w;build()}});
+ro.observe(rack);
+const samples=new Map();
+const IN_APP=/GulintanganApp/.test(navigator.userAgent)&&!!(navigator.mediaDevices&&window.MediaRecorder);
+document.body.classList.toggle('inapp',IN_APP);
+let recBusy=false;
+async function recordClip(label){
+ const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+ const mr=new MediaRecorder(stream),chunks=[];
+ mr.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+ const done=new Promise(r=>{mr.onstop=r});
+ mr.start();
+ for(let n=3;n>0;n--){msg(`Recording… strike the gong now (${n})`);await new Promise(r=>setTimeout(r,1000))}
+ mr.stop();await done;stream.getTracks().forEach(t=>t.stop());
+ const blob=new Blob(chunks,{type:mr.mimeType||'audio/webm'});
+ return new File([blob],'Recorded '+label+'.webm',{type:blob.type});
+}
+const msg=t=>{document.getElementById('msg').textContent=t};
+const nm=m=>NAMES[m%12]+(Math.floor(m/12)-1);
+const DB={
+ open(){return new Promise((res,rej)=>{const r=indexedDB.open('gul-samples',1);r.onupgradeneeded=()=>r.result.createObjectStore('s');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})},
+ async tx(mode,fn){const d=await this.open();return new Promise((res,rej)=>{const t=d.transaction('s',mode),o=t.objectStore('s');const r=fn(o);t.oncomplete=()=>res(r&&r.result);t.onerror=()=>rej(t.error)})},
+ put(k,v){return this.tx('readwrite',o=>o.put(v,k))},
+ del(k){return this.tx('readwrite',o=>o.delete(k))},
+ clear(){return this.tx('readwrite',o=>o.clear())},
+ async all(){const keys=await this.tx('readonly',o=>o.getAllKeys());const vals=await this.tx('readonly',o=>o.getAll());return keys.map((k,i)=>[k,vals[i]])}
+};
+function decode(ab){return new Promise((res,rej)=>{const p=ctx.decodeAudioData(ab,res,rej);if(p&&p.then)p.then(res,rej)})}
+const nf=m=>440*Math.pow(2,(m-69)/12);
+async function addSample(m,data,name,persist,f){
+ initAudio();
+ const buf=await decode(data.slice(0));
+ const d=buf.getChannelData(0);let peak=0;for(let i=0;i<d.length;i++){const a=Math.abs(d[i]);if(a>peak)peak=a}
+ if(peak<1e-4)throw new Error('silent');
+ let i0=0;const thr=peak*.05;while(i0<d.length&&Math.abs(d[i0])<thr)i0++;
+ const off=Math.max(0,i0/buf.sampleRate-.004);
+ if(f==='detect'){f=detect(buf,off);if(!f)throw new Error('nopitch');m=Math.round(69+12*Math.log2(f/440))}
+ f=f||nf(m);
+ samples.set(m,{buf,name,off,f,data,gain:Math.min(8,.9/peak)});
+ if(persist){try{await DB.put(m,{name,data,f})}catch(e){}}
+ return{m,f};
+}
+function detect(buf,off){
+ const sr=buf.sampleRate,d=buf.getChannelData(0),st0=Math.floor((off+.05)*sr),N=Math.min(8192,d.length-st0);
+ if(N<2048)return null;
+ const x=d.subarray(st0,st0+N),minL=Math.floor(sr/2400),maxL=Math.floor(sr/80),r=new Float32Array(maxL+2);
+ let mx=0;
+ for(let l=minL;l<=maxL+1;l++){let a=0,e1=0,e2=0;const M=N-l;for(let i=0;i<M;i++){a+=x[i]*x[i+l];e1+=x[i]*x[i];e2+=x[i+l]*x[i+l]}r[l]=a/Math.sqrt(e1*e2+1e-12);if(l<=maxL&&r[l]>mx)mx=r[l]}
+ if(mx<.3)return null;
+ for(let l=minL+1;l<=maxL;l++){if(r[l]>=.9*mx&&r[l]>=r[l-1]&&r[l]>=r[l+1]){const a=r[l-1],b=r[l],c=r[l+1],den=a-2*b+c,sh=den?.5*(a-c)/den:0;return sr/(l+sh)}}
+ return null;
+}
+function detRender(m,f){
+ const cents=Math.round(1200*Math.log2(f/nf(m)));
+ let opts='';for(let k=48;k<=96;k++)opts+=`<option value="${k}"${k===m?' selected':''}>${nm(k)}</option>`;
+ document.getElementById('det').innerHTML=`Detected <b>${nm(m)}</b> (${cents>=0?'+':''}${cents} cents). Wrong note? <select id="fix" data-m="${m}" aria-label="Correct note">${opts}</select>`;
+}
+async function quickLoad(file){
+ msg('Finding the note…');
+ try{
+  const r=await addSample(null,await file.arrayBuffer(),file.name,true,'detect');
+  if(st.src!=='rec'){st.src='rec';save();sync()}
+  detRender(r.m,r.f);msg(`All gongs now play from your ${nm(r.m)} recording.`);build();
+ }catch(e){msg(e.message==='nopitch'?"Couldn't find a clear note. Load it on a row below instead, or record a cleaner strike.":"Couldn't use that file. Try .m4a, .mp3 or .wav.")}
+}
+async function fixNote(sel){
+ const from=+sel.dataset.m,to=+sel.value,sm=samples.get(from);if(!sm)return;
+ samples.delete(from);sm.f=nf(to);samples.set(to,sm);
+ try{await DB.del(from);await DB.put(to,{name:sm.name,data:sm.data,f:sm.f})}catch(e){}
+ sel.dataset.m=to;msg(`Set as ${nm(to)}. All gongs re-tuned from it.`);build();
+}
+function nearest(m){let best=null,bd=1e9;for(const k of samples.keys()){const dd=Math.abs(k-m);if(dd<bd){bd=dd;best=k}}return best}
+function playSample(m,vel){
+ const k=nearest(m);if(k===null)return false;
+ const sm=samples.get(k),t=ctx.currentTime+.005;
+ const src=ctx.createBufferSource(),g=ctx.createGain();
+ src.buffer=sm.buf;src.playbackRate.value=nf(m)/sm.f;
+ g.gain.setValueAtTime(.55*vel*sm.gain,t);
+ if(st.ring==='short')g.gain.setTargetAtTime(0,t+.16,.05);
+ src.connect(g);g.connect(bus);src.start(t,sm.off);
+ voices.push(g);if(voices.length>28){const v=voices.shift();v.gain.setTargetAtTime(0,ctx.currentTime,.04)}
+ return true;
+}
+function parseNote(name){
+ const mm=name.replace(/\.[^.]+$/,'').match(/(?:^|[^a-z])([a-g])(#|♯|s|b|♭)?(-?\d)(?!\d)/i);
+ if(!mm)return null;
+ let n={c:0,d:2,e:4,f:5,g:7,a:9,b:11}[mm[1].toLowerCase()];
+ const acc=mm[2]||'';if('#♯sS'.includes(acc)&&acc)n++;else if(acc)n--;
+ return(+mm[3]+1)*12+n;
+}
+function renderRows(){
+ document.getElementById('rows').innerHTML=cur.map(n=>{
+  const s=samples.get(n.m),k=nearest(n.m);
+  const stt=s?`<span class="stt ok">${s.name.replace(/[<>&"]/g,'')}</span>`:k!==null?`<span class="stt">Uses ${nm(k)}, pitch shifted</span>`:`<span class="stt">Synth sound</span>`;
+  return `<div class="rrow"><b>${n.name}</b>${stt}<div class="acts"><label class="sm">Load<input type="file" accept="audio/*,video/*" data-m="${n.m}"></label>${IN_APP?`<button class="sm" data-rec="${n.m}">Record</button>`:''}<button class="sm" data-play="${n.m}">Play</button>${s?`<button class="sm" data-clr="${n.m}">Clear</button>`:''}</div></div>`}).join('');
+}
+async function loadFiles(list,target){
+ const ok=[],bad=[];let free=cur.map(n=>n.m).filter(m=>!samples.has(m));
+ msg('Loading…');
+ for(const f of list){
+  let m=target!=null?target:parseNote(f.name);
+  if(m==null){m=free.find(x=>!samples.has(x));}
+  if(m==null){bad.push(f.name);continue}
+  try{await addSample(m,await f.arrayBuffer(),f.name,true);ok.push(nm(m))}catch(e){bad.push(f.name)}
+ }
+ if(ok.length&&st.src!=='rec'){st.src='rec';save();sync()}
+ msg((ok.length?`Loaded: ${ok.join(', ')}. `:'')+(bad.length?`Couldn't use: ${bad.join(', ')}. Try .m4a, .mp3 or .wav files.`:''));
+ build();
+}
+const recs=document.getElementById('recs');
+recs.addEventListener('change',e=>{const inp=e.target;if(inp.id==='fix'){fixNote(inp);return}
+ if(inp.type!=='file'||!inp.files.length)return;
+ if(inp.id==='one'){quickLoad(inp.files[0]);inp.value='';return}
+ loadFiles([...inp.files],inp.dataset.m?+inp.dataset.m:null);inp.value=''});
+recs.addEventListener('click',async e=>{
+ const b=e.target.closest('button');if(!b)return;
+ if(b.id==='recone'||b.dataset.rec){
+  if(recBusy)return;recBusy=true;
+  try{if(b.id==='recone')await quickLoad(await recordClip('note'));else{const m=+b.dataset.rec;await loadFiles([await recordClip(nm(m))],m)}}
+  catch(x){msg('Microphone not available. Allow microphone access for Gulintangan in your phone Settings.')}
+  recBusy=false;return;
+ }
+ if(b.dataset.play){const m=+b.dataset.play,i=cur.findIndex(n=>n.m===m);hitEl(rack.querySelector(`.gong[data-i="${i}"]`))}
+ else if(b.dataset.clr){const m=+b.dataset.clr;samples.delete(m);try{await DB.del(m)}catch(x){}msg(`Cleared ${nm(m)}.`);build()}
+ else if(b.id==='clrall'){samples.clear();try{await DB.clear()}catch(x){}msg('All recordings cleared.');build()}
+});
+sync();build();
+(async()=>{try{const all=await DB.all();if(!all.length)return;initAudio();for(const[k,v]of all){try{await addSample(+k,v.data,v.name,false,v.f)}catch(e){}}build()}catch(e){}})();
+}
+</script>
+</body></html>
